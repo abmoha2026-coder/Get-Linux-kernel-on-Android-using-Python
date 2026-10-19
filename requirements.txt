@@ -1,0 +1,3 @@
+# minimal requirements
+
+# No python dependencies required; uses system git/make/adb/fastboot
