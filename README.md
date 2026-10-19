@@ -1,58 +1,33 @@
 # Get-Linux-kernel-on-Android-using-Python
 
-This repository contains a small Python CLI tool to help fetch, build, and interact with Linux kernels on Android devices.
+A small Python package for fetching, building, installing, and interacting with Linux kernels on Android devices.
 
-WARNING: Building and flashing kernels is device-specific and can brick your device. Use this tool only if you know what you're doing. Always have backups and an unlocked bootloader (if required) and know how to restore your device.
+Installation
 
-What this tool provides
+    python3 -m pip install .
 
-- fetch: clone a kernel tree from git
-- build: invoke make to build the kernel (requires toolchain / CROSS_COMPILE for non-host builds)
-- install-modules: run "make modules_install" into a local install path
-- push-modules: push .ko files to a connected Android device via adb
-- devices: list adb devices
-- device-shell: run a command on the device
-- flash-boot: flash a boot image via fastboot (requires user confirmation)
-- env-check: check presence of git/make/adb/fastboot
+Quick usage
 
-Prerequisites
+    kernel-android-tool fetch https://github.com/torvalds/linux.git linux-src --depth 1
+    kernel-android-tool build linux-src --arch arm64 --cross aarch64-linux-gnu- --target Image
+    kernel-android-tool install-modules linux-src /tmp/kernel-modules --arch arm64 --cross aarch64-linux-gnu-
+    kernel-android-tool devices
+    kernel-android-tool shell "uname -a"
+    kernel-android-tool env-check
 
-- Python 3.8+
-- git
-- make
-- adb and fastboot (Android Platform Tools)
-- cross-compiler toolchain if building for arm/arm64 (set CROSS_COMPILE and ARCH env vars or pass via CLI)
+Commands
 
-Examples
+- fetch: clone a Linux kernel source repository
+- build: run make for the selected architecture and target
+- install-modules: install built kernel modules into a local tree
+- push-modules: copy .ko files to /system/lib/modules on a connected Android device
+- devices: list connected adb devices
+- shell: execute a command in the Android shell
+- flash-boot: flash a boot image with fastboot
+- env-check: confirm that required host tools are installed
 
-Clone a kernel tree:
+Notes
 
-    python3 kernel_tool.py fetch https://github.com/torvalds/linux.git linux-src --depth 1
-
-Build (example for arm64 with an aarch64 toolchain prefix):
-
-    export CROSS_COMPILE=aarch64-linux-gnu-
-    export ARCH=arm64
-    python3 kernel_tool.py build linux-src --jobs 8
-
-Install modules to a local tree:
-
-    python3 kernel_tool.py install-modules linux-src /tmp/kernel-mods
-
-Push modules to device (requires root and writable filesystem):
-
-    python3 kernel_tool.py push-modules /tmp/kernel-mods --device-path /system/lib/modules
-
-Flash a boot image (fastboot) — this will prompt for confirmation by default:
-
-    python3 kernel_tool.py flash-boot path/to/boot.img
-
-Notes and safety
-
-- This tool intentionally does not attempt to automatically detect and install cross-toolchains.
-- Flashing boot images and remounting system partitions require an unlocked bootloader and/or root access. The tool will not bypass device security.
-- Some commands will fail on stock, non-rooted devices.
-
-Contributions
-
-This is a starting point. Contributions welcome: add support for building with defconfig, packing boot images (mkbootimg), integrating with Android-specific device trees, automation for vendor kernels, and safer device detection.
+- Building kernels for Android often requires a cross compiler and correct ARCH/CROSS_COMPILE values.
+- Flashing boot images or modifying system modules is device- and vendor-specific and may require root or an unlocked bootloader.
+- This is intended for research, development, and experimentation; use it carefully.

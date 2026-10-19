@@ -1,0 +1,96 @@
+import argparse
+import os
+import sys
+
+from .core import (
+    build_kernel,
+    check_environment,
+    device_shell,
+    fetch_kernel,
+    flash_boot_image,
+    install_modules,
+    list_devices,
+    push_modules_to_device,
+)
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(
+        description="Fetch/build/install/interact with Linux kernels on Android devices"
+    )
+    subparsers = parser.add_subparsers(dest="command")
+
+    fetch_parser = subparsers.add_parser("fetch", help="Clone a kernel source repository")
+    fetch_parser.add_argument("url")
+    fetch_parser.add_argument("dest")
+    fetch_parser.add_argument("--branch", default=None)
+    fetch_parser.add_argument("--depth", type=int, default=1)
+
+    build_parser = subparsers.add_parser("build", help="Build a kernel tree")
+    build_parser.add_argument("src")
+    build_parser.add_argument("--arch", default=os.environ.get("ARCH"))
+    build_parser.add_argument("--cross", default=os.environ.get("CROSS_COMPILE"))
+    build_parser.add_argument("--jobs", type=int, default=None)
+    build_parser.add_argument("--target", default="Image")
+
+    install_parser = subparsers.add_parser("install-modules", help="Install modules into a local tree")
+    install_parser.add_argument("src")
+    install_parser.add_argument("dest")
+    install_parser.add_argument("--arch", default=os.environ.get("ARCH"))
+    install_parser.add_argument("--cross", default=os.environ.get("CROSS_COMPILE"))
+
+    push_parser = subparsers.add_parser("push-modules", help="Push kernel modules to an Android device")
+    push_parser.add_argument("local")
+    push_parser.add_argument("--device-path", default="/system/lib/modules")
+    push_parser.add_argument("--no-remount", dest="remount", action="store_false")
+
+    devices_parser = subparsers.add_parser("devices", help="List connected adb devices")
+    shell_parser = subparsers.add_parser("shell", help="Run a shell command on the device")
+    shell_parser.add_argument("command")
+
+    flash_parser = subparsers.add_parser("flash-boot", help="Flash a boot image using fastboot")
+    flash_parser.add_argument("bootimg")
+    flash_parser.add_argument("--yes", action="store_true")
+
+    subparsers.add_parser("env-check", help="Check required host tools")
+
+    return parser
+
+
+def main():
+    parser = build_parser()
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
+
+    try:
+        if args.command == "fetch":
+            fetch_kernel(args.url, args.dest, branch=args.branch, depth=args.depth)
+        elif args.command == "build":
+            build_kernel(
+                args.src,
+                arch=args.arch,
+                cross_compile=args.cross,
+                jobs=args.jobs,
+                target=args.target,
+            )
+        elif args.command == "install-modules":
+            install_modules(args.src, args.dest, arch=args.arch, cross_compile=args.cross)
+        elif args.command == "push-modules":
+            push_modules_to_device(args.local, device_modules_path=args.device_path, remount=args.remount)
+        elif args.command == "devices":
+            list_devices()
+        elif args.command == "shell":
+            device_shell(args.command)
+        elif args.command == "flash-boot":
+            flash_boot_image(args.bootimg, require_confirm=not args.yes)
+        elif args.command == "env-check":
+            check_environment()
+        else:
+            parser.error(f"Unsupported command: {args.command}")
+    except Exception as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+
